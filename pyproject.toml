@@ -10,3 +10,8 @@ dependencies = [
     "granian>=2.2.5",
     "loguru>=0.7.3",
 ]
+
+[dependency-groups]
+dev = [
+    "fastapi[standard]>=0.115.12",
+]

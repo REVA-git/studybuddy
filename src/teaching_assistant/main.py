@@ -1,6 +1,6 @@
 from agency_swarm import Agency
 
-from Tara.tara import Tara
+from teaching_assistant.Tara.tara import Tara
 
 
 # Initialize agents
