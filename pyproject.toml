@@ -4,4 +4,9 @@ version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.12"
-dependencies = []
+dependencies = [
+    "agency-swarm>=0.5.1",
+    "fastapi>=0.115.12",
+    "granian>=2.2.5",
+    "loguru>=0.7.3",
+]
