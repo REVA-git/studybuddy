@@ -1,9 +1,16 @@
+import asyncio
+import json
 from agency_swarm import AgencyEventHandler
 from fastapi import FastAPI
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from teaching_assistant.main import agency
 from fastapi.middleware.cors import CORSMiddleware
+from queue import Queue
+import threading
+from openai.types.beta import AssistantStreamEvent
+
+from teaching_assistant.models.request_models import AgencyRequestStreaming
 
 app = FastAPI()
 
@@ -25,49 +32,72 @@ from typing_extensions import override
 from agency_swarm import AgencyEventHandler
 
 
-class EventHandler(AgencyEventHandler):
-    @override
-    def on_text_created(self, text) -> None:
-        # Get the name of the agent that is sending the message
-        print(
-            f"\n{self.recipient_agent_name} @ {self.agent_name}  > ", end="", flush=True
-        )
-
-    @override
-    def on_text_delta(self, delta, snapshot):
-        print(delta.value, end="", flush=True)
-
-    def on_tool_call_created(self, tool_call):
-        print(f"\n{self.recipient_agent_name} > {tool_call.type}\n", flush=True)
-
-    def on_tool_call_delta(self, delta, snapshot):
-        if delta.type == "code_interpreter":
-            if delta.code_interpreter.input:
-                print(delta.code_interpreter.input, end="", flush=True)
-            if delta.code_interpreter.outputs:
-                print(f"\n\noutput >", flush=True)
-                for output in delta.code_interpreter.outputs:
-                    if output.type == "logs":
-                        print(f"\n{output.logs}", flush=True)
-
-    @classmethod
-    def on_all_streams_end(cls):
-        print(
-            "\n\nAll streams have ended."
-        )  # Conversation is over and message is returned to the user.
-
-
-def stream_response(message):
-    return StreamingResponse(
-        agency.get_completion(message, yield_messages=True),
-        media_type="text/event-stream",
-    )
-
-
 @app.post("/chat")
-async def chat_endpoint(request: ChatRequest):
+async def get_completion_stream(request: AgencyRequestStreaming):
+    queue = Queue()
+
+    class StreamEventHandler(AgencyEventHandler):
+        @override
+        def on_event(self, event: AssistantStreamEvent) -> None:
+            queue.put(event.model_dump())
+
+        @classmethod
+        def on_all_streams_end(cls):
+            queue.put("[DONE]")
+
+        @classmethod
+        def on_exception(cls, exception: Exception):
+            # Store the actual exception
+            queue.put({"error": str(exception)})
+
+    async def generate_response():
+        try:
+
+            def run_completion():
+                try:
+                    agency.get_completion_stream(
+                        request.message,
+                        message_files=request.message_files,
+                        recipient_agent=request.recipient_agent,
+                        additional_instructions=request.additional_instructions,
+                        attachments=request.attachments,
+                        tool_choice=request.tool_choice,
+                        response_format=request.response_format,
+                        event_handler=StreamEventHandler,
+                    )
+                except Exception as e:
+                    # Send the actual exception
+                    queue.put({"error": str(e)})
+
+            thread = threading.Thread(target=run_completion)
+            thread.start()
+
+            while True:
+                try:
+                    event = queue.get(timeout=30)
+                    if event == "[DONE]":
+                        break
+                    # If it's an error event
+                    if isinstance(event, dict) and "error" in event:
+                        yield f"data: {json.dumps(event)}\n\n"
+                        break
+                    yield f"data: {json.dumps(event)}\n\n"
+                except Queue.Empty:
+                    yield f"data: {json.dumps({'error': 'Request timed out'})}\n\n"
+                    break
+                except Exception as e:
+                    yield f"data: {json.dumps({'error': str(e)})}\n\n"
+                    break
+
+        except Exception as e:
+            yield f"data: {json.dumps({'error': str(e)})}\n\n"
 
     return StreamingResponse(
-        agency.get_completion_stream(request.message, EventHandler),
+        generate_response(),
         media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
     )
