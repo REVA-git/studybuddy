@@ -1,5 +1,6 @@
 services:
-  connector-service:
+  tara:
+    container_name: tara
     build: .
     ports:
       - "8000:8000"
