@@ -1,27 +1,17 @@
 import asyncio
 import json
 from agency_swarm import AgencyEventHandler
-from fastapi import FastAPI
+from fastapi import APIRouter
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from teaching_assistant.main import agency
-from fastapi.middleware.cors import CORSMiddleware
 from queue import Queue
 import threading
 from openai.types.beta import AssistantStreamEvent
 
 from teaching_assistant.models.request_models import AgencyRequestStreaming
 
-app = FastAPI()
-
-# Add CORS middleware
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+router = APIRouter()
 
 
 class ChatRequest(BaseModel):
@@ -32,7 +22,7 @@ from typing_extensions import override
 from agency_swarm import AgencyEventHandler
 
 
-@app.post("/chat")
+@router.post("/chat")
 async def get_completion_stream(request: AgencyRequestStreaming):
     queue = Queue()
 

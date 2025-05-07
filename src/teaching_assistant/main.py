@@ -14,7 +14,3 @@ agency = Agency(
     ],
     shared_instructions="./agency_manifesto.md",
 )  # Path relative to agency_swarm package
-
-
-if __name__ == "__main__":
-    agency.run_demo()

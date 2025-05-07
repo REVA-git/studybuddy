@@ -10,7 +10,16 @@
       "cwd": "${workspaceFolder}/src",
       "request": "launch",
       "module": "fastapi",
-      "args": ["dev", "teaching_assistant/api.py", "--reload"],
+      "args": ["dev", "asgi.py", "--reload"],
+      "jinja": true
+    },
+    {
+      "name": "cli",
+      "type": "debugpy",
+      "cwd": "${workspaceFolder}/src",
+      "request": "launch",
+      "program": "cli.py",
+      "args": [],
       "jinja": true
     }
   ]
