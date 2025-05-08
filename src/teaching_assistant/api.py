@@ -5,7 +5,7 @@ from fastapi import APIRouter
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from teaching_assistant.main import agency
-from queue import Queue
+from queue import Queue, Empty
 import threading
 from openai.types.beta import AssistantStreamEvent
 
@@ -64,7 +64,7 @@ async def get_completion_stream(request: AgencyRequestStreaming):
 
             while True:
                 try:
-                    event = queue.get(timeout=30)
+                    event = await asyncio.to_thread(queue.get, timeout=30)
                     if event == "[DONE]":
                         break
                     # If it's an error event
@@ -72,7 +72,7 @@ async def get_completion_stream(request: AgencyRequestStreaming):
                         yield f"data: {json.dumps(event)}\n\n"
                         break
                     yield f"data: {json.dumps(event)}\n\n"
-                except Queue.Empty:
+                except Empty:
                     yield f"data: {json.dumps({'error': 'Request timed out'})}\n\n"
                     break
                 except Exception as e:
