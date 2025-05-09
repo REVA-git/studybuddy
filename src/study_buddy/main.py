@@ -1,16 +1,16 @@
 from agency_swarm import Agency
 
-from teaching_assistant.Tara.tara import Tara
+from study_buddy.StudyBuddy.study_buddy import StudyBuddy
 
 
 # Initialize agents
-tara = Tara()
+study_buddy = StudyBuddy()
 
 # Define agency structure
 # Simplified to only include the Coder agent
 agency = Agency(
     [
-        tara,
+        study_buddy,
     ],
     shared_instructions="./agency_manifesto.md",
 )  # Path relative to agency_swarm package

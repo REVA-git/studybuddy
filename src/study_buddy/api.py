@@ -4,12 +4,12 @@ from agency_swarm import AgencyEventHandler
 from fastapi import APIRouter
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
-from teaching_assistant.main import agency
+from study_buddy.main import agency
 from queue import Queue, Empty
 import threading
 from openai.types.beta import AssistantStreamEvent
 
-from teaching_assistant.models.request_models import AgencyRequestStreaming
+from study_buddy.models.request_models import AgencyRequestStreaming
 
 router = APIRouter()
 

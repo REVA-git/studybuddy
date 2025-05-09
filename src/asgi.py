@@ -1,4 +1,4 @@
-from teaching_assistant.api import router
+from study_buddy.api import router
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 

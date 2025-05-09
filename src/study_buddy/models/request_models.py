@@ -3,7 +3,7 @@ from typing import Dict, List
 from pydantic import BaseModel, field_validator, model_validator
 
 from agency_swarm import Agent
-from teaching_assistant.main import agency
+from study_buddy.main import agency
 
 # Create dynamic RecipientAgent enum
 agent_names = {agent.name: agent.name for agent in agency.agents}
