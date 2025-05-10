@@ -1,6 +1,6 @@
 services:
-  tara:
-    container_name: tara
+  studybuddy:
+    container_name: studybuddy
     build: .
     ports:
       - "8000:8000"
