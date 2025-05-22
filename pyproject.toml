@@ -9,10 +9,15 @@ dependencies = [
     "fastapi>=0.115.12",
     "gradio>=5.30.0",
     "granian>=2.2.5",
+    "huggingface-hub>=0.31.4",
     "loguru>=0.7.3",
+    "mlx>=0.25.2",
+    "mlx-lm>=0.24.1",
+    "transformers>=4.52.2",
 ]
 
 [dependency-groups]
 dev = [
     "fastapi[standard]>=0.115.12",
+    "ipykernel>=6.29.5",
 ]
