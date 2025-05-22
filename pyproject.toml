@@ -7,6 +7,7 @@ requires-python = ">=3.12"
 dependencies = [
     "agency-swarm>=0.5.1",
     "fastapi>=0.115.12",
+    "gradio>=5.30.0",
     "granian>=2.2.5",
     "loguru>=0.7.3",
 ]
