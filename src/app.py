@@ -401,16 +401,21 @@ def demo_gradio(agency: Agency, height=450, dark_mode=True, **kwargs):
                 def on_click(bubbles, history):
                     if bubbles and idx < len(bubbles):
                         bubble_text = bubbles[idx]
-                        # Send the bubble text as a user message
-                        return user(bubble_text, history)
-                    return "", history
+                        # Send the bubble text as a user message and clear bubbles
+                        user_msg, new_history = user(bubble_text, history)
+                        return user_msg, new_history, []
+                    return "", history, []
 
                 return on_click
 
             btn.click(
                 make_bubble_click(i),
                 inputs=[bubbles_state, chatbot],
-                outputs=[msg, chatbot],
+                outputs=[msg, chatbot, bubbles_state],
+            ).then(
+                lambda *args: [],
+                [],
+                [bubbles_state],
             ).then(
                 bot,
                 [msg, chatbot, dropdown, bubbles_state],
