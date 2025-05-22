@@ -9,6 +9,7 @@ from agency_swarm.util.streaming import create_gradio_handler
 from agency_swarm.tools import CodeInterpreter, FileSearch
 
 from study_buddy.main import agency
+from study_buddy.main import bubble_bot
 
 
 def demo_gradio(agency: Agency, height=450, dark_mode=True, **kwargs):
@@ -62,6 +63,22 @@ def demo_gradio(agency: Agency, height=450, dark_mode=True, **kwargs):
             with gr.Column(scale=1):
                 file_upload = gr.Files(label="OpenAI Files", type="filepath")
         button = gr.Button(value="Send", variant="primary")
+
+        # Add a state to hold the current suggestion bubbles
+        bubbles_state = gr.State([])
+        # Add a row of up to 4 buttons for suggestion bubbles
+        with gr.Row() as bubble_row:
+            bubble_btns = [gr.Button(visible=False) for _ in range(4)]
+
+        def update_bubble_buttons(bubbles):
+            # Update the button labels and visibility based on the bubbles list
+            updates = []
+            for i, btn in enumerate(bubble_btns):
+                if i < len(bubbles):
+                    updates.append(gr.update(value=bubbles[i], visible=True))
+                else:
+                    updates.append(gr.update(visible=False))
+            return updates
 
         def handle_dropdown_change(selected_option):
             nonlocal recipient_agent
@@ -176,7 +193,7 @@ def demo_gradio(agency: Agency, height=450, dark_mode=True, **kwargs):
 
             return original_user_message, history + [[user_message, None]]
 
-        def bot(original_message, history, dropdown):
+        def bot(original_message, history, dropdown, bubbles):
             nonlocal attachments
             nonlocal message_file_names
             nonlocal recipient_agent
@@ -192,6 +209,8 @@ def demo_gradio(agency: Agency, height=450, dark_mode=True, **kwargs):
                         value=recipient_agent.name,
                         choices=set([*recipient_agent_names, recipient_agent.name]),
                     ),
+                    bubbles,
+                    *update_bubble_buttons(bubbles),
                 )
 
             if uploading_files:
@@ -203,6 +222,8 @@ def demo_gradio(agency: Agency, height=450, dark_mode=True, **kwargs):
                         value=recipient_agent.name,
                         choices=set([*recipient_agent_names, recipient_agent.name]),
                     ),
+                    bubbles,
+                    *update_bubble_buttons(bubbles),
                 )
                 return (
                     "",
@@ -211,6 +232,8 @@ def demo_gradio(agency: Agency, height=450, dark_mode=True, **kwargs):
                         value=recipient_agent.name,
                         choices=set([*recipient_agent_names, recipient_agent.name]),
                     ),
+                    bubbles,
+                    *update_bubble_buttons(bubbles),
                 )
 
             logger.info(f"Message files: {attachments}")
@@ -245,12 +268,73 @@ def demo_gradio(agency: Agency, height=450, dark_mode=True, **kwargs):
             uploading_files = False
 
             new_message = True
+            current_bubbles = bubbles.copy() if bubbles else []
             while True:
                 try:
                     bot_message = chatbot_queue.get(block=True)
+                    print(f"{bot_message=}")
+
+                    # Handle bubble suggestion event
+                    if (
+                        isinstance(bot_message, dict)
+                        and bot_message.get("type") == "bubble_suggestions"
+                    ):
+                        current_bubbles = bot_message.get("bubbles", [])[:4]
+                        yield (
+                            "",
+                            history,
+                            gr.update(
+                                value=recipient_agent.name,
+                                choices=set(
+                                    [*recipient_agent_names, recipient_agent.name]
+                                ),
+                            ),
+                            current_bubbles,
+                            *update_bubble_buttons(current_bubbles),
+                        )
+                        continue
 
                     if bot_message == "[end]":
                         completion_thread.join()
+                        # At the end of the stream, call bubble_bot to generate suggestions
+                        # Gather conversation history and last agent message
+                        conversation_history = []
+                        last_agent_message = ""
+                        for pair in history:
+                            if pair[0]:
+                                conversation_history.append(pair[0])
+                            if pair[1]:
+                                conversation_history.append(pair[1])
+                        # Find the last non-empty agent (bot) message
+                        for pair in reversed(history):
+                            if pair[1]:
+                                last_agent_message = pair[1]
+                                break
+                        try:
+                            result = bubble_bot.generate_bubbles(
+                                last_study_buddy_message=last_agent_message,
+                                conversation_history=conversation_history,
+                            )
+                            bubbles_out = (
+                                result["suggested_bubbles"][:4]
+                                if result and "suggested_bubbles" in result
+                                else []
+                            )
+                        except Exception as e:
+                            print(f"BubbleBot error: {e}")
+                            bubbles_out = []
+                        yield (
+                            "",
+                            history,
+                            gr.update(
+                                value=recipient_agent.name,
+                                choices=set(
+                                    [*recipient_agent_names, recipient_agent.name]
+                                ),
+                            ),
+                            bubbles_out,
+                            *update_bubble_buttons(bubbles_out),
+                        )
                         break
 
                     if bot_message == "[new_message]":
@@ -269,6 +353,8 @@ def demo_gradio(agency: Agency, height=450, dark_mode=True, **kwargs):
                                     [*recipient_agent_names, recipient_agent.name]
                                 ),
                             ),
+                            current_bubbles,
+                            *update_bubble_buttons(current_bubbles),
                         )
                         continue
 
@@ -285,18 +371,51 @@ def demo_gradio(agency: Agency, height=450, dark_mode=True, **kwargs):
                             value=recipient_agent.name,
                             choices=set([*recipient_agent_names, recipient_agent.name]),
                         ),
+                        current_bubbles,
+                        *update_bubble_buttons(current_bubbles),
                     )
                 except queue.Empty:
                     break
 
+        # Button click logic for send
         button.click(user, inputs=[msg, chatbot], outputs=[msg, chatbot]).then(
-            bot, [msg, chatbot, dropdown], [msg, chatbot, dropdown]
+            bot,
+            [msg, chatbot, dropdown, bubbles_state],
+            [msg, chatbot, dropdown, bubbles_state, *bubble_btns],
         )
+        # Dropdown change
         dropdown.change(handle_dropdown_change, dropdown)
+        # File upload
         file_upload.change(handle_file_upload, file_upload)
+        # Textbox submit
         msg.submit(user, [msg, chatbot], [msg, chatbot], queue=False).then(
-            bot, [msg, chatbot, dropdown], [msg, chatbot, dropdown]
+            bot,
+            [msg, chatbot, dropdown, bubbles_state],
+            [msg, chatbot, dropdown, bubbles_state, *bubble_btns],
         )
+
+        # Bubble button click logic
+        for i, btn in enumerate(bubble_btns):
+
+            def make_bubble_click(idx):
+                def on_click(bubbles, history):
+                    if bubbles and idx < len(bubbles):
+                        bubble_text = bubbles[idx]
+                        # Send the bubble text as a user message
+                        return user(bubble_text, history)
+                    return "", history
+
+                return on_click
+
+            btn.click(
+                make_bubble_click(i),
+                inputs=[bubbles_state, chatbot],
+                outputs=[msg, chatbot],
+            ).then(
+                bot,
+                [msg, chatbot, dropdown, bubbles_state],
+                [msg, chatbot, dropdown, bubbles_state, *bubble_btns],
+            )
 
         # Enable queuing for streaming intermediate outputs
         demo.queue(default_concurrency_limit=10)
