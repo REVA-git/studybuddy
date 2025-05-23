@@ -9,7 +9,7 @@ class StudyBuddy(Agent):
 
         # Construct paths relative to the current directory
         instructions_path = os.path.join(current_dir, "instructions.md")
-        files_folder = os.path.join(current_dir, "files")
+        files_folder = os.path.join(current_dir, "files/CSE/2nd Sem/C Programming Lab")
         # tools_folder needs update if still used
         tools_folder = os.path.join(
             current_dir, "tools"

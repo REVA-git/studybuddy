@@ -12,7 +12,7 @@ from study_buddy.main import agency
 from study_buddy.main import bubble_bot
 
 
-def demo_gradio(agency: Agency, height=450, dark_mode=True, **kwargs):
+def demo_gradio(agency: Agency, height=550, dark_mode=True, **kwargs):
     """
     Launches a Gradio-based demo interface for the agency chatbot.
 
@@ -44,45 +44,81 @@ def demo_gradio(agency: Agency, height=450, dark_mode=True, **kwargs):
     images = []
     message_file_names = None
     uploading_files = False
-    recipient_agent_names = [agent.name for agent in agency.main_recipients]
-    recipient_agent = agency.main_recipients[0]
+    studybuddy_agent = agency.main_recipients[0]
 
     chatbot_queue = queue.Queue()
     gradio_handler_class = create_gradio_handler(chatbot_queue=chatbot_queue)
 
-    with gr.Blocks(js=js) as demo:
-        chatbot = gr.Chatbot(height=height)
-        with gr.Row():
-            with gr.Column(scale=9):
-                dropdown = gr.Dropdown(
-                    label="Recipient Agent",
-                    choices=recipient_agent_names,
-                    value=recipient_agent.name,
-                )
-                msg = gr.Textbox(label="Your Message", lines=4)
-            with gr.Column(scale=1):
-                file_upload = gr.Files(label="OpenAI Files", type="filepath")
-        button = gr.Button(value="Send", variant="primary")
-
-        # Add a state to hold the current suggestion bubbles
+    with gr.Blocks(
+        js=js,
+        css="""
+    .chat-input-row {position: fixed; bottom: 0; left: 0; right: 0; background: #18181a; z-index: 100; padding: 0 0 24px 0; border: none; box-shadow: 0 -2px 16px rgba(0,0,0,0.12);}
+    .chatbot-main {height: 70vh !important; min-height: 400px; max-height: 80vh; border: none !important; box-shadow: none !important; background: transparent;}
+    .bubble-row-top {margin-bottom: 8px; justify-content: center; display: flex; gap: 16px;}
+    .welcome-center {display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; text-align: center;}
+    .welcome-title {font-size: 2.5rem; font-weight: 700; margin-bottom: 24px; color: #fff;}
+    .bubble-btn {min-width: 180px; margin: 0 8px; border-radius: 18px; background: #23272f; color: #fff; border: none; padding: 16px 24px; font-size: 1.1rem; box-shadow: 0 2px 8px rgba(0,0,0,0.08); transition: background 0.2s; display: none;}
+    .bubble-btn.visible {display: inline-block;}
+    .bubble-btn:hover {background: #343a46;}
+    .gradio-container {background: #18181a !important;}
+    .input-box-modern {border-radius: 16px; background: #23272f; border: 1px solid #343a46; color: #fff; font-size: 1.1rem; padding: 16px;}
+    .file-upload-modern {background: transparent; border: none; color: #fff; min-width: 0;}
+    #send-btn {height: 40px; border-radius: 12px; font-size: 1.1rem; margin-left: 8px; min-width: 80px; background: #6c47ff; color: #fff; border: none; box-shadow: 0 2px 8px rgba(0,0,0,0.08); transition: background 0.2s;}
+    #send-btn:hover {background: #5436c7;}
+    """,
+    ) as demo:
         bubbles_state = gr.State([])
-        # Add a row of up to 4 buttons for suggestion bubbles
-        with gr.Row() as bubble_row:
-            bubble_btns = [gr.Button(visible=False) for _ in range(4)]
+
+        # Welcome message and bubbles (shown only if no chat history)
+        with gr.Column(visible=True, elem_classes="welcome-center") as welcome_col:
+            gr.Markdown("<div class='welcome-title'>What can I help with?</div>")
+            with gr.Row(elem_classes="bubble-row-top", equal_height=True):
+                bubble_btns = [
+                    gr.Button(visible=False, elem_classes="bubble-btn", scale=1)
+                    for _ in range(4)
+                ]
+
+        chatbot = gr.Chatbot(
+            height=None,
+            type="tuples",
+            elem_classes="chatbot-main",
+            show_label=False,
+            show_copy_button=False,
+        )
+
+        with gr.Row(elem_classes="chat-input-row", equal_height=True):
+            with gr.Column(scale=8):
+                msg = gr.Textbox(
+                    placeholder="Ask anything",
+                    lines=1,
+                    max_lines=4,
+                    label=None,
+                    elem_classes="input-box-modern",
+                )
+            with gr.Column(scale=2, min_width=80):
+                file_upload = gr.Files(
+                    label=None,
+                    type="filepath",
+                    height=36,
+                    elem_classes="file-upload-modern",
+                )
+            with gr.Column(scale=2, min_width=80):
+                button = gr.Button(value="Send", variant="primary", elem_id="send-btn")
 
         def update_bubble_buttons(bubbles):
-            # Update the button labels and visibility based on the bubbles list
             updates = []
             for i, btn in enumerate(bubble_btns):
-                if i < len(bubbles):
-                    updates.append(gr.update(value=bubbles[i], visible=True))
+                if i < len(bubbles) and bubbles[i]:
+                    updates.append(
+                        gr.update(
+                            value=bubbles[i],
+                            visible=True,
+                            elem_classes="bubble-btn visible",
+                        )
+                    )
                 else:
-                    updates.append(gr.update(visible=False))
+                    updates.append(gr.update(visible=False, elem_classes="bubble-btn"))
             return updates
-
-        def handle_dropdown_change(selected_option):
-            nonlocal recipient_agent
-            recipient_agent = agency._get_agent_by_name(selected_option)
 
         def handle_file_upload(file_list):
             nonlocal attachments
@@ -138,42 +174,38 @@ def demo_gradio(agency: Agency, height=450, dark_mode=True, **kwargs):
             nonlocal uploading_files
             nonlocal images
             nonlocal attachments
-            nonlocal recipient_agent
 
             # Check if attachments contain file search or code interpreter types
-            def check_and_add_tools_in_attachments(attachments, recipient_agent):
+            def check_and_add_tools_in_attachments(attachments, agent):
                 for attachment in attachments:
                     for tool in attachment.get("tools", []):
                         if tool["type"] == "file_search":
-                            if not any(
-                                isinstance(t, FileSearch) for t in recipient_agent.tools
-                            ):
+                            if not any(isinstance(t, FileSearch) for t in agent.tools):
                                 # Add FileSearch tool if it does not exist
-                                recipient_agent.tools.append(FileSearch)
-                                recipient_agent.client.beta.assistants.update(
-                                    recipient_agent.id,
-                                    tools=recipient_agent.get_oai_tools(),
+                                agent.tools.append(FileSearch)
+                                agent.client.beta.assistants.update(
+                                    agent.id,
+                                    tools=agent.get_oai_tools(),
                                 )
                                 logger.info(
-                                    "Added FileSearch tool to recipient agent to analyze the file."
+                                    "Added FileSearch tool to agent to analyze the file."
                                 )
                         elif tool["type"] == "code_interpreter":
                             if not any(
-                                isinstance(t, CodeInterpreter)
-                                for t in recipient_agent.tools
+                                isinstance(t, CodeInterpreter) for t in agent.tools
                             ):
                                 # Add CodeInterpreter tool if it does not exist
-                                recipient_agent.tools.append(CodeInterpreter)
-                                recipient_agent.client.beta.assistants.update(
-                                    recipient_agent.id,
-                                    tools=recipient_agent.get_oai_tools(),
+                                agent.tools.append(CodeInterpreter)
+                                agent.client.beta.assistants.update(
+                                    agent.id,
+                                    tools=agent.get_oai_tools(),
                                 )
                                 logger.info(
-                                    "Added CodeInterpreter tool to recipient agent to analyze the file."
+                                    "Added CodeInterpreter tool to agent to analyze the file."
                                 )
                 return None
 
-            check_and_add_tools_in_attachments(attachments, recipient_agent)
+            check_and_add_tools_in_attachments(attachments, studybuddy_agent)
 
             if history is None:
                 history = []
@@ -181,23 +213,16 @@ def demo_gradio(agency: Agency, height=450, dark_mode=True, **kwargs):
             original_user_message = user_message
 
             # Append the user message with a placeholder for bot response
-            if recipient_agent:
-                user_message = (
-                    f"👤 User 🗣️ @{recipient_agent.name}:\n" + user_message.strip()
-                )
-            else:
-                user_message = "👤 User:" + user_message.strip()
+            user_message = f"👤 User 🗣️ @studybuddy:\n" + user_message.strip()
 
             if message_file_names:
                 user_message += "\n\n📎 Files:\n" + "\n".join(message_file_names)
 
             return original_user_message, history + [[user_message, None]]
 
-        def bot(original_message, history, dropdown, bubbles):
+        def bot(original_message, history, bubbles):
             nonlocal attachments
             nonlocal message_file_names
-            nonlocal recipient_agent
-            nonlocal recipient_agent_names
             nonlocal images
             nonlocal uploading_files
 
@@ -205,10 +230,6 @@ def demo_gradio(agency: Agency, height=450, dark_mode=True, **kwargs):
                 return (
                     "",
                     history,
-                    gr.update(
-                        value=recipient_agent.name,
-                        choices=set([*recipient_agent_names, recipient_agent.name]),
-                    ),
                     bubbles,
                     *update_bubble_buttons(bubbles),
                 )
@@ -218,20 +239,12 @@ def demo_gradio(agency: Agency, height=450, dark_mode=True, **kwargs):
                 yield (
                     "",
                     history,
-                    gr.update(
-                        value=recipient_agent.name,
-                        choices=set([*recipient_agent_names, recipient_agent.name]),
-                    ),
                     bubbles,
                     *update_bubble_buttons(bubbles),
                 )
                 return (
                     "",
                     history,
-                    gr.update(
-                        value=recipient_agent.name,
-                        choices=set([*recipient_agent_names, recipient_agent.name]),
-                    ),
                     bubbles,
                     *update_bubble_buttons(bubbles),
                 )
@@ -254,7 +267,7 @@ def demo_gradio(agency: Agency, height=450, dark_mode=True, **kwargs):
                     original_message,
                     gradio_handler_class,
                     [],
-                    recipient_agent,
+                    studybuddy_agent,
                     "",
                     attachments,
                     None,
@@ -282,12 +295,6 @@ def demo_gradio(agency: Agency, height=450, dark_mode=True, **kwargs):
                         yield (
                             "",
                             history,
-                            gr.update(
-                                value=recipient_agent.name,
-                                choices=set(
-                                    [*recipient_agent_names, recipient_agent.name]
-                                ),
-                            ),
                             current_bubbles,
                             *update_bubble_buttons(current_bubbles),
                         )
@@ -325,12 +332,6 @@ def demo_gradio(agency: Agency, height=450, dark_mode=True, **kwargs):
                         yield (
                             "",
                             history,
-                            gr.update(
-                                value=recipient_agent.name,
-                                choices=set(
-                                    [*recipient_agent_names, recipient_agent.name]
-                                ),
-                            ),
                             bubbles_out,
                             *update_bubble_buttons(bubbles_out),
                         )
@@ -341,20 +342,8 @@ def demo_gradio(agency: Agency, height=450, dark_mode=True, **kwargs):
                         continue
 
                     if bot_message == "[change_recipient_agent]":
-                        new_agent_name = chatbot_queue.get(block=True)
-                        recipient_agent = agency._get_agent_by_name(new_agent_name)
-                        yield (
-                            "",
-                            history,
-                            gr.update(
-                                value=new_agent_name,
-                                choices=set(
-                                    [*recipient_agent_names, recipient_agent.name]
-                                ),
-                            ),
-                            current_bubbles,
-                            *update_bubble_buttons(current_bubbles),
-                        )
+                        # Ignore agent change events
+                        chatbot_queue.get(block=True)  # discard new agent name
                         continue
 
                     if new_message:
@@ -366,10 +355,6 @@ def demo_gradio(agency: Agency, height=450, dark_mode=True, **kwargs):
                     yield (
                         "",
                         history,
-                        gr.update(
-                            value=recipient_agent.name,
-                            choices=set([*recipient_agent_names, recipient_agent.name]),
-                        ),
                         current_bubbles,
                         *update_bubble_buttons(current_bubbles),
                     )
@@ -379,18 +364,16 @@ def demo_gradio(agency: Agency, height=450, dark_mode=True, **kwargs):
         # Button click logic for send
         button.click(user, inputs=[msg, chatbot], outputs=[msg, chatbot]).then(
             bot,
-            [msg, chatbot, dropdown, bubbles_state],
-            [msg, chatbot, dropdown, bubbles_state, *bubble_btns],
+            [msg, chatbot, bubbles_state],
+            [msg, chatbot, bubbles_state, *bubble_btns],
         )
-        # Dropdown change
-        dropdown.change(handle_dropdown_change, dropdown)
         # File upload
         file_upload.change(handle_file_upload, file_upload)
         # Textbox submit
         msg.submit(user, [msg, chatbot], [msg, chatbot], queue=False).then(
             bot,
-            [msg, chatbot, dropdown, bubbles_state],
-            [msg, chatbot, dropdown, bubbles_state, *bubble_btns],
+            [msg, chatbot, bubbles_state],
+            [msg, chatbot, bubbles_state, *bubble_btns],
         )
 
         # Bubble button click logic
@@ -417,8 +400,8 @@ def demo_gradio(agency: Agency, height=450, dark_mode=True, **kwargs):
                 [bubbles_state],
             ).then(
                 bot,
-                [msg, chatbot, dropdown, bubbles_state],
-                [msg, chatbot, dropdown, bubbles_state, *bubble_btns],
+                [msg, chatbot, bubbles_state],
+                [msg, chatbot, bubbles_state, *bubble_btns],
             )
 
         # Enable queuing for streaming intermediate outputs
@@ -433,9 +416,10 @@ def demo_gradio(agency: Agency, height=450, dark_mode=True, **kwargs):
                 demo._queue.delete_lock = asyncio.Lock()
 
     # Launch the demo
-    demo.launch(**kwargs)
-    return demo
+
+    return demo, kwargs
 
 
 if __name__ == "__main__":
-    demo_gradio(agency)
+    demo, kwargs = demo_gradio(agency)
+    demo.launch(**kwargs)
