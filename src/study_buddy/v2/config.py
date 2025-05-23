@@ -21,10 +21,13 @@ class ModelConfig:
 GEMMA_3 = ModelConfig("gemma3:1b", 0.7, ModelProvider.OLLAMA)
 QWEN = ModelConfig("qwen2.5:0.5b", 0.7, ModelProvider.OLLAMA)
 
+GEMMA_3_4b = ModelConfig("gemma3:4b", 0.7, ModelProvider.OLLAMA)
+LLAMA_3_2_3b = ModelConfig("llama3.2:3b", 0.7, ModelProvider.OLLAMA)
+
 
 class Config:
     SEED = 42
-    CHAT_MODEL = GEMMA_3
+    CHAT_MODEL = LLAMA_3_2_3b
     TOOL_MODEL = QWEN
 
     class Path:

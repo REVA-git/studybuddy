@@ -8,29 +8,29 @@ from study_buddy.v2.chatbot import ask_chatbot, chat_workflow
 from study_buddy.v2.memory import create_memory_manager
 
 LOADING_MESSAGES = [
-    "Taking a deep breath before responding...",
-    "Centering my thoughts to provide mindful guidance...",
-    "Gathering wellness wisdom for you...",
-    "Aligning my energy to best support your journey...",
-    "Reflecting on holistic approaches to your question...",
-    "Finding balance before sharing insights...",
-    "Breathing in clarity, breathing out confusion...",
-    "Mindfully considering the most helpful response...",
-    "Tapping into wellness knowledge for you...",
-    "Creating space for thoughtful reflection...",
-    "Grounding myself to provide meaningful guidance...",
-    "Connecting mind and body to address your needs...",
-    "Preparing a mindful response with intention...",
-    "Cultivating presence before sharing advice...",
-    "Drawing from holistic wellness principles...",
-    "Pausing to ensure my guidance is centered...",
-    "Channeling balanced energy for our conversation...",
-    "Gathering mindfulness practices that may help...",
-    "Finding the path to wellness wisdom...",
-    "Bringing attention to what matters most in your journey...",
+    "Cracking open the brain snacks... 🍟🧠",
+    "Sharpening my virtual pencils... ✏️🤓",
+    "Googling the universe (JK, I'm smarter than that)... 🌐🚀",
+    "Summoning the study squad... 📚👾",
+    "Charging up my brain cells... ⚡️🧠",
+    "Finding the cheat sheet (legally)... 📝😏",
+    "Doing a quick brain dance... 🕺🧠",
+    "Making sure I don't sound like a textbook... 📖❌",
+    "Loading up the Gen Z vibes... 😎✨",
+    "Checking for quantum banana theory... 🍌🔬",
+    "Hyping up your next answer... 🎉🙌",
+    "Plotting your brain glow-up... 💡🔥",
+    "Flexing my AI muscles... 💪🤖",
+    "Getting my meme game ready... 🥳📸",
+    "Prepping a brainwave just for you... 🌊🧠",
+    "Making sure I'm not cringe... 😅👌",
+    "Channeling my inner study buddy... 🎓🤝",
+    "Rolling out the brain carpet... 🧠🪄",
+    "Double-checking my fun facts... 🤔🎲",
+    "Warming up my hype squad voice... 📣😃",
 ]
 
-CHATBOT_INTRO = """Hello, I'm your study buddy!"""
+CHATBOT_INTRO = "Hey hey! 👋 I'm your AI study buddy — part tutor, part hype squad, and 100% here for your brain goals. 😎 What are we diving into today? Math? History? Quantum banana theory? (Okay fine, made that one up.)\n\nYou feeling confident or kinda 'help me plz'? Any upcoming tests or just curious vibes?\n\nWanna roll in English, Kannada, Hindi, or full-on desi mode? 🇮🇳"
 
 
 def create_history(prompt: str, app_config) -> List[BaseMessage]:
@@ -41,14 +41,16 @@ def create_history(prompt: str, app_config) -> List[BaseMessage]:
 
 
 st.set_page_config(
-    page_title="Mindora",
-    page_icon="🧠",
+    page_title="REVA StudyBuddy",
+    page_icon="🎓",
     layout="centered",
     initial_sidebar_state="collapsed",
 )
 
-st.header("Mindora")
-st.subheader("Your personal AI wellness coach who grows with you")
+st.header("REVA StudyBuddy")
+st.subheader(
+    "Your Gen Z AI study buddy — hype squad, brain cheerleader, and co-learner!"
+)
 
 if "thread_id" not in st.session_state:
     st.session_state.thread_id = "1"
@@ -77,25 +79,16 @@ if memories:
     for memory in memories:
         st.markdown(f"- {memory.content} (importance: {memory.importance})")
 
-welcome_message = AIMessage(
-    content=(
-        f"{CHATBOT_INTRO} How are you today?"
-        if len(memories) > 0
-        else f"{CHATBOT_INTRO} What is your name?"
-    )
-)
-
+welcome_message = AIMessage(content=CHATBOT_INTRO)
 
 state = chat_workflow.get_state(app_config)
 st.session_state.messages = state.values or [welcome_message]
-
 
 for message in st.session_state.messages:
     is_user = type(message) is HumanMessage
     avatar = "👤" if is_user else "🤖"
     with st.chat_message("user" if is_user else "ai", avatar=avatar):
         st.markdown(message.content)
-
 
 if prompt := st.chat_input("Ask me anything"):
     with st.chat_message("user", avatar="👤"):

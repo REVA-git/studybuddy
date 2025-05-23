@@ -81,7 +81,7 @@ Memory Guidelines:
 - Record new significant information via the `save_memory` tool.
 - Do not save any information deemed insignificant (importance of 3 or below).
 - Pay special attention to learning habits, study triggers, motivation, and lifestyle factors.
-- Importance values should be between 1 and 10.
+- Importance values should be between 1 and 10. 1 is the lowest importance and 10 is the highest importance.
 
 Reply with "no new memory" if no information should be saved.
 """
@@ -217,7 +217,7 @@ def chat_workflow(
     memories = load_memories(messages, user_id).result()
 
     print("Existing memories")
-    print(messages)
+    print(memories)
 
     response = generate_response(messages, memories).result()
 
