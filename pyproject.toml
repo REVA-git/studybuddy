@@ -6,14 +6,23 @@ readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "agency-swarm>=0.5.1",
+    "arxiv>=2.2.0",
     "fastapi>=0.115.12",
+    "fastembed>=0.7.0",
     "gradio>=5.30.0",
     "granian>=2.2.5",
     "huggingface-hub>=0.31.4",
+    "langchain-community>=0.3.24",
+    "langchain-ollama>=0.3.3",
+    "langchain-tavily>=0.1.6",
+    "langgraph>=0.4.5",
+    "langgraph-checkpoint-sqlite>=2.0.10",
     "loguru>=0.7.3",
     "mlx>=0.25.2",
     "mlx-lm>=0.24.1",
+    "streamlit>=1.45.1",
     "transformers>=4.52.2",
+    "wikipedia>=1.4.0",
 ]
 
 [dependency-groups]

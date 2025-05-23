@@ -21,6 +21,24 @@
       "program": "cli.py",
       "args": [],
       "jinja": true
+    },
+    {
+      "name": "app",
+      "type": "debugpy",
+      "cwd": "${workspaceFolder}/src",
+      "request": "launch",
+      "program": "app.py",
+      "args": [],
+      "jinja": true
+    },
+    {
+      "name": "streamlit",
+      "type": "debugpy",
+      "cwd": "${workspaceFolder}/src",
+      "request": "launch",
+      "module": "streamlit",
+      "args": ["run", "st_app.py"],
+      "jinja": true
     }
   ]
 }

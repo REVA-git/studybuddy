@@ -272,7 +272,6 @@ def demo_gradio(agency: Agency, height=450, dark_mode=True, **kwargs):
             while True:
                 try:
                     bot_message = chatbot_queue.get(block=True)
-                    print(f"{bot_message=}")
 
                     # Handle bubble suggestion event
                     if (
