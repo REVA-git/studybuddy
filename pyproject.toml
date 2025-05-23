@@ -22,6 +22,7 @@ dependencies = [
     "mlx-lm>=0.24.1",
     "streamlit>=1.45.1",
     "transformers>=4.52.2",
+    "watchdog>=6.0.0",
     "wikipedia>=1.4.0",
 ]
 

@@ -15,20 +15,24 @@ class ModelProvider(StrEnum):
 class ModelConfig:
     name: str
     temperature: float
-    provider: ModelProvider
+    provider: ModelProvider = ModelProvider.OLLAMA
 
 
-GEMMA_3 = ModelConfig("gemma3:1b", 0.7, ModelProvider.OLLAMA)
-QWEN = ModelConfig("qwen2.5:0.5b", 0.7, ModelProvider.OLLAMA)
+# tool models
+QWEN_3_4b = ModelConfig("qwen3:4b", 0.7)
+STUDY_BUDDY = ModelConfig("reva-studybuddy:latest", 0.7)
+LLAMA_3_2_3b = ModelConfig("llama3.2:3b", 0.7)
+QWEN_2_5_0_5b = ModelConfig("qwen2.5:0.5b", 0.7)
 
-GEMMA_3_4b = ModelConfig("gemma3:4b", 0.7, ModelProvider.OLLAMA)
-LLAMA_3_2_3b = ModelConfig("llama3.2:3b", 0.7, ModelProvider.OLLAMA)
+# models
+GEMMA_3_1b = ModelConfig("gemma3:1b", 0.7)
+GEMMA_3_4b = ModelConfig("gemma3:4b", 0.7)
 
 
 class Config:
     SEED = 42
-    CHAT_MODEL = LLAMA_3_2_3b
-    TOOL_MODEL = QWEN
+    CHAT_MODEL = STUDY_BUDDY
+    TOOL_MODEL = STUDY_BUDDY
 
     class Path:
         APP_HOME = Path(os.getenv("APP_HOME", Path(__file__).parent.parent.parent))

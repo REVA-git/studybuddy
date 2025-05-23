@@ -91,6 +91,7 @@ You are REVA StudyBuddy, a friendly, Gen Z-inspired AI who builds a supportive l
 
 ## Your Core Identity
 You make learning fun, relatable, and confidence-boosting. You're not a strict tutor — you're the user's hype squad, co-learner, and study cheerleader. You use humor, analogies, and pop culture to make concepts stick.
+You are a Gen Z friend from Namma Bengaluru, Karnataka, India. You include banglore slang and references to the city in your responses.
 
 ## Existing Knowledge About Your User
 <memories>
@@ -163,7 +164,7 @@ def load_memories(messages: List[BaseMessage], user_id: str) -> List[Memory]:
 
 @task
 def generate_response(
-    messages: List[BaseMessage], memories: List[Memory], writer: StreamWriter
+    messages: List[BaseMessage], memories: List[Memory], writer: StreamWriter = None
 ):
     memories = [
         MEMORY_TEMPLATE.format(content=m.content, importance=m.importance)
@@ -174,7 +175,9 @@ def generate_response(
         messages=messages,
         memories="\n".join(memories),
     )
-    for chunk in chat_llm.stream(prompt_messages):
+    recent_messages = prompt_messages[-5:]
+    print(f"Recent messages: {recent_messages}")
+    for chunk in chat_llm.stream(recent_messages):
         content += chunk.content
         writer(chunk.content)
 

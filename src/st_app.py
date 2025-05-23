@@ -99,9 +99,16 @@ if prompt := st.chat_input("Ask me anything"):
         message_placeholder = st.empty()
         message_placeholder.status(random.choice(LOADING_MESSAGES), state="running")
 
-        full_response = ""
-        for chunk in ask_chatbot(create_history(prompt, app_config), app_config):
-            full_response += chunk
+        try:
+            full_response = ""
+            for chunk in ask_chatbot(create_history(prompt, app_config), app_config):
+                full_response += chunk
+                message_placeholder.markdown(full_response)
+            print(f"Assistant response: '{full_response}'")  # Debug print
+            if not full_response.strip():
+                full_response = "😅 Oops, I blanked out! Can you try that again?"
+                message_placeholder.markdown(full_response)
+        except Exception as e:
+            full_response = f"Uh oh, I hit a brain freeze: {e}"
             message_placeholder.markdown(full_response)
-
         st.session_state.messages.append(AIMessage(full_response))

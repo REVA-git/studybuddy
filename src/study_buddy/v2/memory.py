@@ -24,7 +24,7 @@ class Memory(BaseModel):
     content: str
     user_id: str
     created_at: datetime = Field(default_factory=datetime.now)
-    importance: int = Field(5, ge=1, le=10)
+    importance: int = Field(5, ge=0, le=10)
 
     def to_document(self) -> Document:
         return Document(

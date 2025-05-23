@@ -11,3 +11,4 @@ wheels/
 .env
 .cursorrules
 data/
+.DS_Store
